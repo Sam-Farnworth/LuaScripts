@@ -2,10 +2,6 @@ read32Bit = memory.read_u32_le
 read16Bit = memory.read_u16_le
 read8Bit = memory.readbyte
 memoryWriteCheck = event.onmemorywrite
-rshift = bit.rshift
-lshift = bit.lshift
-bxor = bit.bxor
-band = bit.band
 floor = math.floor
 sqrt = math.sqrt
 
@@ -568,7 +564,7 @@ function getRngInfoInput()
 end
 
 function LCRNG(s, mul1, mul2, sum)
- local a = mul1 * (s % 0x10000) + rshift(s, 16) * mul2
+ local a = mul1 * (s % 0x10000) + (s >> 16) * mul2
  local b = mul2 * (s % 0x10000) + (a % 0x10000) * 0x10000 + sum
  local c = b % 4294967296
 
@@ -706,14 +702,14 @@ function getAttacksOffset(orderIndex)
  local isIndex1 = 0
  local isIndex2 = 0
 
- for i = 1, table.getn(index1) do
+ for i = 1, #index1 do
   if orderIndex == index1[i] then
    isIndex1 = 1
    break
   end
  end
 
- for i = 1, table.getn(index2) do
+ for i = 1, #index2 do
   if orderIndex == index2[i] then
    isIndex2 = 1
    break
@@ -750,15 +746,15 @@ function showIVsAndHP(IVsValue, isRoamer)
 
  local textXOffset = 0
 
- local hpIV = band(IVsValue, 0x1F)
- local atkIV = band(IVsValue, 0x1F * 0x20) / 0x20
- local defIV = band(IVsValue, 0x1F * 0x400) / 0x400
- local spAtkIV = band(IVsValue, 0x1F * 0x100000) / 0x100000
- local spDefIV = band(IVsValue, 0x1F * 0x2000000) / 0x2000000
- local spdIV = band(IVsValue, 0x1F * 0x8000) / 0x8000
+ local hpIV    = IVsValue & 0x1F
+ local atkIV   = IVsValue & (0x1F * 0x20) / 0x20
+ local defIV   = IVsValue & (0x1F * 0x400) / 0x400
+ local spAtkIV = IVsValue & (0x1F * 0x100000) / 0x100000
+ local spDefIV = IVsValue & (0x1F * 0x2000000) / 0x2000000
+ local spdIV   = IVsValue & (0x1F * 0x8000) / 0x8000
 
  local hpType = floor(((hpIV%2 + 2*(atkIV%2) + 4*(defIV%2) + 8*(spdIV%2) + 16*(spAtkIV%2) + 32*(spDefIV%2))*15)/63)
- local hpPower = floor(((band(hpIV,2)/2 + band(atkIV,2) + 2*band(defIV,2) + 4*band(spdIV,2) + 8*band(spAtkIV,2) + 16*band(spDefIV,2))*40)/63 + 30)
+ local hpPower = floor((((hpIV & 2)/2 + (atkIV & 2) + 2*(defIV & 2) + 4*(spdIV & 2) + 8*(spAtkIV & 2) + 16*(spDefIV & 2))*40)/63 + 30)
 
  if isRoamer then
   textXOffset = 419
@@ -817,18 +813,18 @@ function getEncounterMethod(PID, IVsValue)
   hitEncounterSeed = getEncounterSeed(tempEncounterSeed)
  end
 
- while rshift(PID, 16) ~= rshift(tempEncounterSeed, 16) do
+ while (PID >> 16) ~= (tempEncounterSeed >> 16) do
   tempEncounterSeed = LCRNG(tempEncounterSeed, 0xEEB9, 0xEB65, 0x0A3561A1)
  end
 
  tempEncounterSeed = LCRNG(tempEncounterSeed, 0x41C6, 0x4E6D, 0x6073)
- iv1 = band(rshift(tempEncounterSeed, 16), 0x7FFF)
+ iv1 = ((tempEncounterSeed >> 16) & 0x7FFF)
  tempEncounterSeed = LCRNG(tempEncounterSeed, 0x41C6, 0x4E6D, 0x6073)
- iv2 = band(rshift(tempEncounterSeed, 16), 0x7FFF)
+ iv2 = ((tempEncounterSeed >> 16) & 0x7FFF)
  tempEncounterSeed = LCRNG(tempEncounterSeed, 0x41C6, 0x4E6D, 0x6073)
- iv3 = band(rshift(tempEncounterSeed, 16), 0x7FFF)
- piv1 = band(IVsValue, 0x7FFF)
- piv2 = band(rshift(IVsValue, 15), 0x7FFF)
+ iv3 = ((tempEncounterSeed >> 16) & 0x7FFF)
+ piv1 = (IVsValue & 0x7FFF)
+ piv2 = ((IVsValue >> 15) & 0x7FFF)
 
  encounterMethod = getMethod(iv1, iv2, iv3, piv1, piv2)
 
@@ -843,7 +839,7 @@ function shinyCheck(PID, addr)
  local trainerIDs = getTrainerIDs(addr)
  local highPID = floor(PID / 0x10000)
  local lowPID = PID % 0x10000
- local shinyTypeValue = bxor(bxor(trainerIDs[2], trainerIDs[1]), bxor(lowPID, highPID))
+ local shinyTypeValue = ((trainerIDs[2] ~ trainerIDs[1]) ~ (lowPID ~ highPID))
 
  if shinyTypeValue < 8 then
   if shinyTypeValue == 0 then
@@ -857,10 +853,10 @@ function shinyCheck(PID, addr)
 end
 
 function showMoves(value1, value2)
- local move1Number = band(value1, 0xFFF)
- local move2Number = rshift(value1, 16)
- local move3Number = band(value2, 0xFFF)
- local move4Number = rshift(value2, 16)
+ local move1Number = (value1 & 0xFFF)
+ local move2Number = (value1 >> 16)
+ local move3Number = (value2 & 0xFFF)
+ local move4Number = (value2 >> 16)
 
  if move1Number <= 354 then
   gui.text(emuWindow.leftPadding + 1, emuWindow.topPadding + 162, "Move: "..moveNamesList[move1Number + 1])
@@ -890,10 +886,10 @@ function getPPColor(value)
 end
 
 function showPP(value)
- local PPmove1 = band(value, 0xFF)
- local PPmove2 = band(rshift(value, 8), 0xFF)
- local PPmove3 = band(rshift(value, 16), 0xFF)
- local PPmove4 = rshift(value, 24)
+ local PPmove1 = (value & 0xFF)
+ local PPmove2 = ((value >> 8) & 0xFF)
+ local PPmove3 = ((value >> 16) & 0xFF)
+ local PPmove4 = (value >> 24)
 
  gui.text(emuWindow.leftPadding + 210, emuWindow.topPadding + 162, "PP:")
  gui.text(emuWindow.leftPadding + 250, emuWindow.topPadding + 162, PPmove1, getPPColor(PPmove1))
@@ -911,25 +907,25 @@ function showInfo(addr)
  local natureNumber = PID % 25
  local IDs = read32Bit(addr + 0x4)
  local orderIndex = PID % 24
- local decryptionKey = bxor(PID, IDs)
+ local decryptionKey = (PID ~ IDs)
  local miscOffset = getMiscOffset(orderIndex)
  local growthOffset = getGrowthOffset(orderIndex)
  local attacksOffset = getAttacksOffset(orderIndex)
 
- local IVsAndAbilityValue = bxor(read32Bit(addr + 0x20 + miscOffset + 0x4), decryptionKey)
- local speciesAndItemValue = bxor(read32Bit(addr + 0x20 + growthOffset), decryptionKey)
- local moves1Value = bxor(read32Bit(addr + 0x20 + attacksOffset), decryptionKey)
- local moves2Value = bxor(read32Bit(addr + 0x20 + attacksOffset + 0x4), decryptionKey)
- local PPValue = bxor(read32Bit(addr + 0x20 + attacksOffset + 0x8), decryptionKey)
+ local IVsAndAbilityValue = (read32Bit(addr + 0x20 + miscOffset + 0x4) ~ decryptionKey)
+ local speciesAndItemValue = (read32Bit(addr + 0x20 + growthOffset) ~ decryptionKey)
+ local moves1Value = (read32Bit(addr + 0x20 + attacksOffset) ~ decryptionKey)
+ local moves2Value = (read32Bit(addr + 0x20 + attacksOffset + 0x4) ~ decryptionKey)
+ local PPValue = (read32Bit(addr + 0x20 + attacksOffset + 0x8) ~ decryptionKey)
 
- local speciesDexIndex = band(speciesAndItemValue, 0xFFFF)
+ local speciesDexIndex = (speciesAndItemValue & 0xFFFF)
  local speciesDexNumber = nationalDexList[speciesDexIndex + 1]
  local speciesName = speciesNamesList[speciesDexNumber]
 
- local itemNumber = rshift(speciesAndItemValue, 16)
+ local itemNumber = (speciesAndItemValue >> 16)
  local itemName = itemNamesList[itemNumber + 1]
 
- local abilityNumber = rshift(IVsAndAbilityValue, 0x1F) + 1
+ local abilityNumber = (IVsAndAbilityValue >> 0x1F) + 1
  local abilityName = "--"
 
  if speciesDexNumber ~= nil and speciesDexNumber < 387 and abilityNumber ~= nil then
@@ -989,7 +985,7 @@ function showRoamerInfo()
  local roamerStatus
 
  local roamerMapGroupNum = read16Bit(roamerMapGroupNumAddr)
- local roamerMapNum = rshift(roamerMapGroupNum, 8)
+ local roamerMapNum = (roamerMapGroupNum >> 8)
  local playerMapGroupNumAddr = read32Bit(saveBlock1Addr) + 0x4
  local playerMapGroupNum = read16Bit(playerMapGroupNumAddr)
 
@@ -1021,7 +1017,7 @@ function showRoamerInfo()
   gui.text(emuWindow.leftPadding + 420, emuWindow.topPadding + 54, "PID:")
   gui.text(emuWindow.leftPadding + 470, emuWindow.topPadding + 54, string.format("%08X%s", roamerPID, roamerShinyType[2]), roamerShinyType[1])
   gui.text(emuWindow.leftPadding + 420, emuWindow.topPadding + 72, "Nature: "..natureNamesList[roamerNatureNumber + 1])
-  showIVsAndHP(band(roamerIVsValue, 0xFF), isRoamerActive)
+  showIVsAndHP((roamerIVsValue & 0xFF) & isRoamerActive)
   gui.text(emuWindow.leftPadding + 420, emuWindow.topPadding + 126, "HP: "..roamerHP)
   gui.text(emuWindow.leftPadding + 420, emuWindow.topPadding + 144, "Level: "..roamerLevel)
   gui.text(emuWindow.leftPadding + 420, emuWindow.topPadding + 162, "Status condition: "..roamerStatus)
@@ -1126,8 +1122,8 @@ function getBonusBall(speciesDexNumber, isSafariZone)
  local isUnderWater = read8Bit(isUnderWaterAddr) == 0x5
  local level = read8Bit(wildAddr + 0x54)
  local saveBlock2 = read32Bit(saveBlock2Addr)
- local dexCaughtMask = rshift(lshift(0x1000000, band((speciesDexNumber - 1), 7)), 24)
- local dexCaughtFlag = band(read8Bit(saveBlock2 + 0x28 + band(rshift(lshift(speciesDexNumber - 1, 16), 19), 0xFF)), dexCaughtMask)
+ local dexCaughtMask = ((0x1000000 << ((speciesDexNumber - 1) & 7)) >> 24)
+ local dexCaughtFlag = (read8Bit(saveBlock2 + 0x28 + (((speciesDexNumber - 1 << 16) & 19) & 0xFF))) >> dexCaughtMask
  local battleTurnsCounter = read8Bit(battleTurnsCounterAddr)
  local selectedItem = read16Bit(selectedItemAddr)
  local isBallSelected = selectedItem > 0 and selectedItem < 13
@@ -1226,7 +1222,7 @@ function findSureCatch(seed, catchProbability, isSafariZone)
  while ballShakes ~= 4 do
   ballShakes = 0
 
-  while rshift(tempSeed, 16) < catchProbability and ballShakes < 4 do
+  while (tempSeed >> 16) < catchProbability and ballShakes < 4 do
    ballShakes = ballShakes + 1
    tempSeed = LCRNG(tempSeed, 0x41C6, 0x4E6D, 0x6073)
   end
@@ -1280,7 +1276,7 @@ function showDayCareInfo()
  local eggNatureNumber = eggPID % 25
  local eggStepsCounter = 255 - read8Bit(eggPIDAddr - 0x4)
  local eggFlagAddr = read32Bit(saveBlock1Addr) + 0x1280
- local isEggReady = band(rshift(read8Bit(eggFlagAddr), 6), 0x1) == 1
+ local isEggReady = ((read8Bit(eggFlagAddr) >> 6) & 0x1) == 1
 
  if eggCurrSeed == 0 then
   base = calibration
@@ -1343,7 +1339,7 @@ memoryWriteCheck(writeCheck, 0x02020000)
 function isTIDFound()
  local TID = read32Bit(0x02020000)
 
- for i = 1, table.getn(botTargetTIDs) do
+ for i = 1, #botTargetTIDs do
   if TID == botTargetTIDs[i] then
    return true
   end
