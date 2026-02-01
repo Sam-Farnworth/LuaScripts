@@ -5,6 +5,16 @@ memoryWriteCheck = event.onmemorywrite
 floor = math.floor
 sqrt = math.sqrt
 
+function writeCheck()
+    initSeedWritten = true
+end
+
+function initCallbacks()
+    memoryWriteCheck(writeCheck, 0x02020000, "E_WriteCheck")
+end
+
+event.onloadstate(initCallbacks)
+
 local natureNamesList = {
  "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
  "Bold", "Docile", "Relaxed", "Impish", "Lax",
@@ -1329,12 +1339,6 @@ function showPartyEggInfo()
   showInfo(lastPartySlotAddr)
  end
 end
-
-function writeCheck()
- initSeedWritten = true
-end
-
-memoryWriteCheck(writeCheck, 0x02020000)
 
 function isTIDFound()
  local TID = read32Bit(0x02020000)
