@@ -9,6 +9,8 @@ function writeCheck()
     initSeedWritten = true
 end
 
+--Register memory callback only after load
+--Prevents crashing on reload
 function initCallbacks()
     memoryWriteCheck(writeCheck, 0x02020000, "E_WriteCheck")
 end

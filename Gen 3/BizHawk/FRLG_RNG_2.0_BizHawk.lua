@@ -9,7 +9,8 @@ function writeCheck()
     initSeedWritten = true
 end
 
--- register memory callback only after load
+--Register memory callback only after load
+--Prevents crashing on reload
 function initCallbacks()
     memoryWriteCheck(writeCheck, 0x02020000, "FRLG_WriteCheck")
 end
